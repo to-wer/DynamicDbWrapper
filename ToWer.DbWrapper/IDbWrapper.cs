@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
-namespace DynamicDbWrapper
+namespace ToWer.DbWrapper
 {
     public interface IDbWrapper
     {
@@ -16,6 +12,6 @@ namespace DynamicDbWrapper
 
         void ExecuteNonQuery(string connectionString, string procedureName, Dictionary<string, object> parameters);
 
-        void ExecuteNonQuery<T>(string connectionString, string procedureName, T item) where T:class;
+        void ExecuteNonQuery<T>(string connectionString, string procedureName, T item) where T : class;
     }
 }

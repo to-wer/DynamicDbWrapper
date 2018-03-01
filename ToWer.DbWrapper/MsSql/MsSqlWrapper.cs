@@ -1,21 +1,25 @@
-﻿using DynamicDbWrapper.Converter;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Dynamic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using ToWer.DbWrapper.Converter;
 
-namespace DynamicDbWrapper.MsSql
+namespace ToWer.DbWrapper.MsSql
 {
     public class MsSqlWrapper : IDbWrapper
     {
         #region Public methods
-
+        
         public T ReadSingle<T>(string connectionString, string procedureName) where T : class
         {
-            var result = ExecuteReader(connectionString, procedureName);
+            return ReadSingle<T>(connectionString, procedureName, null);
+        }
+
+        public T ReadSingle<T>(string connectionString, string procedureName, Dictionary<string, object> parameters) where T : class
+        {
+            var result = ExecuteReader(connectionString, procedureName, parameters);
             var item = result.FirstOrDefault();
             if (item == null) return default(T);
             return DynamicConverter.Convert<T>(item);
@@ -23,7 +27,12 @@ namespace DynamicDbWrapper.MsSql
 
         public List<T> ReadList<T>(string connectionString, string procedureName) where T : class
         {
-            var items = ExecuteReader(connectionString, procedureName);
+            return ReadList<T>(connectionString, procedureName, null);
+        }
+
+        public List<T> ReadList<T>(string connectionString, string procedureName, Dictionary<string, object> parameters) where T : class
+        {
+            var items = ExecuteReader(connectionString, procedureName, parameters);
             var result = new List<T>();
             foreach (var item in items)
             {
@@ -68,7 +77,7 @@ namespace DynamicDbWrapper.MsSql
 
         #region Private methods
 
-        private List<dynamic> ExecuteReader(string connectionString, string procedureName)
+        private List<dynamic> ExecuteReader(string connectionString, string procedureName, Dictionary<string, object> parameters)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand())
@@ -76,7 +85,13 @@ namespace DynamicDbWrapper.MsSql
                 cmd.Connection = con;
                 cmd.CommandText = procedureName;
                 cmd.CommandType = System.Data.CommandType.StoredProcedure;
-
+                if (parameters != null)
+                {
+                    foreach (var param in parameters)
+                    {
+                        cmd.Parameters.AddWithValue("@" + param.Key, param.Value);
+                    }
+                }
                 try
                 {
                     con.Open();
@@ -106,20 +121,8 @@ namespace DynamicDbWrapper.MsSql
                     throw;
                 }
             }
-            return default(dynamic);
-        }
-
-        public T ReadSingle<T>(string connectionString, string procedureName, Dictionary<string, object> parameters) where T : class
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<T> ReadList<T>(string connectionString, string procedureName, Dictionary<string, object> parameters) where T : class
-        {
-            throw new NotImplementedException();
         }
 
         #endregion Private methods
-
     }
 }
