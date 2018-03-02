@@ -10,14 +10,59 @@ namespace ToWer.DbWrapper.MsSql
 {
     public class MsSqlWrapper : IDbWrapper
     {
+        #region Properties
+
+        private string _connectionString;
+        private List<SqlParameter> _standardCommandParameters;
+
+        #endregion Properties
+
         #region Public methods
-        
+
+        public void SetConnectionString(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public void SetStandardCommandParameters(List<SqlParameter> parameters)
+        {
+            _standardCommandParameters = parameters;
+        }
+
+        public T ReadSingle<T>(string procedureName) where T : class
+        {
+            if (string.IsNullOrEmpty(_connectionString)) { throw new ArgumentNullException("_connectionString"); }
+            return ReadSingle<T>(_connectionString, procedureName, (List<SqlParameter>)null);
+        }
+
+        public T ReadSingle<T>(string procedureName, Dictionary<string, object> parameters) where T : class
+        {
+            if (string.IsNullOrEmpty(_connectionString)) { throw new ArgumentNullException("_connectionString"); }
+            return ReadSingle<T>(_connectionString, procedureName, parameters);
+        }
+
+        public T ReadSingle<T>(string procedureName, List<SqlParameter> parameters) where T : class
+        {
+            if (string.IsNullOrEmpty(_connectionString)) { throw new ArgumentNullException("_connectionString"); }
+            return ReadSingle<T>(_connectionString, procedureName, parameters);
+        }
+
         public T ReadSingle<T>(string connectionString, string procedureName) where T : class
         {
-            return ReadSingle<T>(connectionString, procedureName, null);
+            return ReadSingle<T>(connectionString, procedureName, (List<SqlParameter>)null);
         }
 
         public T ReadSingle<T>(string connectionString, string procedureName, Dictionary<string, object> parameters) where T : class
+        {
+            var sqlParameters = new List<SqlParameter>();
+            foreach (var param in parameters)
+            {
+                sqlParameters.Add(new SqlParameter(param.Key, param.Value));
+            }
+            return ReadSingle<T>(connectionString, procedureName, sqlParameters);
+        }
+
+        public T ReadSingle<T>(string connectionString, string procedureName, List<SqlParameter> parameters) where T : class
         {
             var result = ExecuteReader(connectionString, procedureName, parameters);
             var item = result.FirstOrDefault();
@@ -25,12 +70,40 @@ namespace ToWer.DbWrapper.MsSql
             return DynamicConverter.Convert<T>(item);
         }
 
+        public List<T> ReadList<T>(string procedureName) where T : class
+        {
+            if (string.IsNullOrEmpty(_connectionString)) { throw new ArgumentNullException("_connectionString"); }
+            return ReadList<T>(_connectionString, procedureName, (List<SqlParameter>)null);
+        }
+
+        public List<T> ReadList<T>(string procedureName, Dictionary<string, object> parameters) where T : class
+        {
+            if (string.IsNullOrEmpty(_connectionString)) { throw new ArgumentNullException("_connectionString"); }
+            return ReadList<T>(_connectionString, procedureName, parameters);
+        }
+
+        public List<T> ReadList<T>(string procedureName, List<SqlParameter> parameters) where T : class
+        {
+            if (string.IsNullOrEmpty(_connectionString)) { throw new ArgumentNullException("_connectionString"); }
+            return ReadList<T>(_connectionString, procedureName, parameters);
+        }
+
         public List<T> ReadList<T>(string connectionString, string procedureName) where T : class
         {
-            return ReadList<T>(connectionString, procedureName, null);
+            return ReadList<T>(connectionString, procedureName, (List<SqlParameter>)null);
         }
 
         public List<T> ReadList<T>(string connectionString, string procedureName, Dictionary<string, object> parameters) where T : class
+        {
+            var sqlParameters = new List<SqlParameter>();
+            foreach(var item in parameters)
+            {
+                sqlParameters.Add(new SqlParameter(item.Key, item.Value));
+            }
+            return ReadList<T>(connectionString, procedureName, sqlParameters);
+        }
+
+        public List<T> ReadList<T>(string connectionString, string procedureName, List<SqlParameter> parameters) where T : class
         {
             var items = ExecuteReader(connectionString, procedureName, parameters);
             var result = new List<T>();
@@ -41,7 +114,32 @@ namespace ToWer.DbWrapper.MsSql
             return result;
         }
 
+        public void ExecuteNonQuery(string procedureName, Dictionary<string, object> parameters)
+        {
+            if (string.IsNullOrEmpty(_connectionString)) throw new ArgumentNullException("_connectionString");
+            ExecuteNonQuery(_connectionString, procedureName, parameters);
+        }
+
+        public void ExecuteNonQuery(string procedureName, List<SqlParameter> parameters)
+        {
+            if (string.IsNullOrEmpty(_connectionString)) throw new ArgumentNullException("_connectionString");
+            ExecuteNonQuery(_connectionString, procedureName, parameters);
+        }
+
         public void ExecuteNonQuery(string connectionString, string procedureName, Dictionary<string, object> parameters)
+        {
+            var sqlParameters = new List<SqlParameter>();
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                sqlParameters.Add(new SqlParameter(param.Key, param.Value));
+                }
+            }
+            ExecuteNonQuery(connectionString, procedureName, sqlParameters);
+        }
+
+        public void ExecuteNonQuery(string connectionString, string procedureName, List<SqlParameter> parameters)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand())
@@ -53,7 +151,7 @@ namespace ToWer.DbWrapper.MsSql
                 {
                     foreach (var param in parameters)
                     {
-                        cmd.Parameters.AddWithValue("@" + param.Key, param.Value);
+                        cmd.Parameters.Add(param);
                     }
                 }
                 try
@@ -77,7 +175,7 @@ namespace ToWer.DbWrapper.MsSql
 
         #region Private methods
 
-        private List<dynamic> ExecuteReader(string connectionString, string procedureName, Dictionary<string, object> parameters)
+        private List<dynamic> ExecuteReader(string connectionString, string procedureName, List<SqlParameter> parameters)
         {
             using (var con = new SqlConnection(connectionString))
             using (var cmd = new SqlCommand())
@@ -85,11 +183,18 @@ namespace ToWer.DbWrapper.MsSql
                 cmd.Connection = con;
                 cmd.CommandText = procedureName;
                 cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                if (_standardCommandParameters != null)
+                {
+                    foreach (var param in _standardCommandParameters)
+                    {
+                        cmd.Parameters.Add(param);
+                    }
+                }
                 if (parameters != null)
                 {
                     foreach (var param in parameters)
                     {
-                        cmd.Parameters.AddWithValue("@" + param.Key, param.Value);
+                        cmd.Parameters.Add(param);
                     }
                 }
                 try
