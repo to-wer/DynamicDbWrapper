@@ -26,6 +26,10 @@ namespace ToWer.DbWrapper.MsSql
 
         public void SetStandardCommandParameters(List<SqlParameter> parameters)
         {
+            if (_standardCommandParameters != null)
+            {
+                _standardCommandParameters.Clear();
+            }
             _standardCommandParameters = parameters;
         }
 
@@ -133,7 +137,7 @@ namespace ToWer.DbWrapper.MsSql
             {
                 foreach (var param in parameters)
                 {
-                sqlParameters.Add(new SqlParameter(param.Key, param.Value));
+                    sqlParameters.Add(new SqlParameter(param.Key, param.Value));
                 }
             }
             ExecuteNonQuery(connectionString, procedureName, sqlParameters);
@@ -147,6 +151,14 @@ namespace ToWer.DbWrapper.MsSql
                 cmd.Connection = con;
                 cmd.CommandText = procedureName;
                 cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.Clear();
+                if (_standardCommandParameters != null)
+                {
+                    foreach (var param in _standardCommandParameters)
+                    {
+                        cmd.Parameters.Add(param);
+                    }
+                }
                 if (parameters != null)
                 {
                     foreach (var param in parameters)
@@ -183,17 +195,25 @@ namespace ToWer.DbWrapper.MsSql
                 cmd.Connection = con;
                 cmd.CommandText = procedureName;
                 cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.Clear();
                 if (_standardCommandParameters != null)
                 {
                     foreach (var param in _standardCommandParameters)
                     {
-                        cmd.Parameters.Add(param);
+                        //if (cmd.Parameters.Contains(param.ParameterName)) { throw new Exception(param.ParameterName); }
+                        var newParam = new SqlParameter(param.ParameterName, param.SqlDbType, param.Size)
+                        {
+                            Direction = param.Direction,
+                            Value = param.Value
+                        };
+                        cmd.Parameters.Add(newParam);
                     }
                 }
                 if (parameters != null)
                 {
                     foreach (var param in parameters)
                     {
+                        if (cmd.Parameters.Contains(param.ParameterName)) { throw new Exception(param.ParameterName); }
                         cmd.Parameters.Add(param);
                     }
                 }
