@@ -5,6 +5,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Text;
 using ToWer.DbWrapper.Converter;
+using ToWer.DbWrapper.Exceptions;
 
 namespace ToWer.DbWrapper.MsSql
 {
@@ -170,6 +171,16 @@ namespace ToWer.DbWrapper.MsSql
                 {
                     con.Open();
                     cmd.ExecuteNonQuery();
+                    if (!string.IsNullOrEmpty(cmd.Parameters["@ErrNum"].Value.ToString()) && cmd.Parameters["@ErrNum"].Value.ToString() != "0")
+                    {
+                        var errNum = (int)cmd.Parameters["@ErrNum"].Value;
+                        var errText = cmd.Parameters["@ErrText"].Value.ToString();
+                        throw new SqlCmdException()
+                        {
+                            ErrNum = errNum,
+                            ErrText = errText
+                        };
+                    }
                 }
                 catch
                 {
